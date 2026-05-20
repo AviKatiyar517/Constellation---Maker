@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constellation Maker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #020810;
+    color: #e8e0d0;
+    font-family: 'Crimson Text', serif;
+    height: 100vh;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  #canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+  }
+
+  /* Top bar */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(to bottom, rgba(2,8,16,0.95), transparent);
+  }
+
+  .title {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    letter-spacing: 0.15em;
+    color: #c8b97a;
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 6px 14px;
+    border-radius: 3px;
+    border: 0.5px solid rgba(200,185,122,0.4);
+    background: rgba(200,185,122,0.08);
+    color: #c8b97a;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn:hover {
+    background: rgba(200,185,122,0.18);
+    border-color: rgba(200,185,122,0.8);
+  }
+
+  .btn.danger {
+    border-color: rgba(200,100,100,0.4);
+    color: #c87a7a;
+    background: rgba(200,100,100,0.08);
+  }
+
+  .btn.danger:hover {
+    background: rgba(200,100,100,0.18);
+    border-color: rgba(200,100,100,0.8);
+  }
+
+  /* Mode indicator */
+  .mode-indicator {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    z-index: 10;
+    font-size: 13px;
+    color: rgba(200,185,122,0.6);
+    letter-spacing: 0.05em;
+  }
+
+  .mode-indicator span {
+    color: #c8b97a;
+    font-weight: 600;
+  }
+
+  /* Instructions */
+  .instructions {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 10;
+    text-align: right;
+    font-size: 12px;
+    color: rgba(200,185,122,0.45);
+    line-height: 1.8;
+    letter-spacing: 0.03em;
+  }
+
+  /* Name modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2,8,16,0.85);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    display: none;
+  }
+
+  .modal {
+    background: #0a1020;
+    border: 0.5px solid rgba(200,185,122,0.35);
+    border-radius: 6px;
+    padding: 2rem;
+    width: 360px;
+    text-align: center;
+  }
+
+  .modal h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    color: #c8b97a;
+    letter-spacing: 0.2em;
+    margin-bottom: 0.5rem;
+  }
+
+  .modal p {
+    font-size: 13px;
+    color: rgba(200,185,122,0.5);
+    margin-bottom: 1.25rem;
+    font-style: italic;
+  }
+
+  .modal input {
+    width: 100%;
+    background: rgba(200,185,122,0.05);
+    border: 0.5px solid rgba(200,185,122,0.3);
+    border-radius: 4px;
+    padding: 10px 14px;
+    color: #e8e0d0;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    text-align: center;
+    outline: none;
+    margin-bottom: 1rem;
+  }
+
+  .modal input:focus {
+    border-color: rgba(200,185,122,0.7);
+  }
+
+  .modal-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  /* Saved list */
+  .saved-panel {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    width: 220px;
+    background: rgba(2,8,16,0.92);
+    border-left: 0.5px solid rgba(200,185,122,0.15);
+    z-index: 10;
+    padding: 1rem;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+
+  .saved-panel.open {
+    transform: translateX(0);
+  }
+
+  .saved-panel h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    color: rgba(200,185,122,0.6);
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .saved-item {
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 0.5px solid rgba(200,185,122,0.15);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .saved-item:hover {
+    background: rgba(200,185,122,0.08);
+    border-color: rgba(200,185,122,0.35);
+  }
+
+  .saved-item .name {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    color: #c8b97a;
+    margin-bottom: 2px;
+  }
+
+  .saved-item .meta {
+    font-size: 11px;
+    color: rgba(200,185,122,0.4);
+    font-style: italic;
+  }
+
+  .saved-item .del {
+    float: right;
+    color: rgba(200,100,100,0.5);
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .saved-item .del:hover {
+    color: #c87a7a;
+  }
+
+  .empty-msg {
+    font-size: 12px;
+    color: rgba(200,185,122,0.3);
+    text-align: center;
+    font-style: italic;
+    margin-top: 2rem;
+  }
+
+  /* Star count badge */
+  .star-count {
+    font-size: 11px;
+    color: rgba(200,185,122,0.5);
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="title">✦ CONSTELLATION MAKER</div>
+  <div class="controls">
+    <span class="star-count" id="starCount">0 stars</span>
+    <button class="btn" onclick="toggleMode()">Mode: <span id="modeLabel">Draw</span></button>
+    <button class="btn" onclick="undoLast()">Undo</button>
+    <button class="btn" onclick="openSaveModal()">Save</button>
+    <button class="btn" onclick="togglePanel()">Collection</button>
+    <button class="btn danger" onclick="clearCanvas()">Clear</button>
+  </div>
+</div>
+
+<!-- Bottom left -->
+<div class="mode-indicator">
+  Mode: <span id="modeDisplay">DRAW STARS</span>
+</div>
+
+<!-- Instructions -->
+<div class="instructions">
+  Click to place stars<br>
+  Right-click star to delete<br>
+  Switch to Connect mode to draw lines<br>
+  Save to your collection
+</div>
+
+<!-- Save Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>NAME YOUR CONSTELLATION</h2>
+    <p>Give this pattern a name to remember it by</p>
+    <input type="text" id="constName" placeholder="e.g. The Wanderer" maxlength="30" />
+    <div class="modal-btns">
+      <button class="btn" onclick="saveConstellation()">Save</button>
+      <button class="btn danger" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Saved Panel -->
+<div class="saved-panel" id="savedPanel">
+  <h3>✦ MY COLLECTION</h3>
+  <div id="savedList"></div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+let stars = [];
+let lines = [];
+let bgStars = [];
+let mode = 'draw'; // 'draw' or 'connect'
+let connectStart = null;
+let saved = JSON.parse(localStorage.getItem('constellations') || '[]');
+let panelOpen = false;
+let animFrame;
+let twinkleOffset = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  generateBgStars();
+}
+
+function generateBgStars() {
+  bgStars = [];
+  const count = Math.floor((W * H) / 3000);
+  for (let i = 0; i < count; i++) {
+    bgStars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 0.8 + 0.2,
+      twinkle: Math.random() * Math.PI * 2,
+      speed: Math.random() * 0.02 + 0.005
+    });
+  }
+}
+
+function drawBgStars() {
+  bgStars.forEach(s => {
+    const alpha = 0.2 + 0.15 * Math.sin(s.twinkle + twinkleOffset * s.speed * 60);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200,210,255,${alpha})`;
+    ctx.fill();
+  });
+}
+
+function drawLines() {
+  lines.forEach(l => {
+    const s1 = stars[l[0]], s2 = stars[l[1]];
+    if (!s1 || !s2) return;
+    ctx.beginPath();
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(s2.x, s2.y);
+    ctx.strokeStyle = 'rgba(180,200,255,0.25)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  });
+}
+
+function drawStars() {
+  stars.forEach((s, i) => {
+    const twinkle = 0.85 + 0.15 * Math.sin(twinkleOffset * 1.5 + i * 0.8);
+
+    // Glow
+    const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 6);
+    grd.addColorStop(0, `rgba(220,230,255,${0.12 * twinkle})`);
+    grd.addColorStop(1, 'rgba(220,230,255,0)');
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r * 6, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+
+    // Core
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r * twinkle, 0, Math.PI * 2);
+    ctx.fillStyle = s.color || '#ffffff';
+    ctx.fill();
+
+    // Connect highlight
+    if (mode === 'connect') {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = connectStart === i
+        ? 'rgba(200,185,122,0.8)'
+        : 'rgba(200,185,122,0.25)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+  });
+}
+
+function drawMouseLine(mx, my) {
+  if (mode === 'connect' && connectStart !== null) {
+    const s = stars[connectStart];
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(mx, my);
+    ctx.strokeStyle = 'rgba(200,185,122,0.4)';
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+let mouseX = 0, mouseY = 0;
+
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+function render() {
+  twinkleOffset += 0.01;
+  ctx.clearRect(0, 0, W, H);
+  drawBgStars();
+  drawLines();
+  drawStars();
+  drawMouseLine(mouseX, mouseY);
+  animFrame = requestAnimationFrame(render);
+}
+
+function getStarAt(x, y) {
+  for (let i = stars.length - 1; i >= 0; i--) {
+    const s = stars[i];
+    const dist = Math.hypot(x - s.x, y - s.y);
+    if (dist < Math.max(s.r + 10, 14)) return i;
+  }
+  return -1;
+}
+
+canvas.addEventListener('click', e => {
+  const x = e.clientX, y = e.clientY;
+  if (mode === 'draw') {
+    // Don't place on existing star
+    if (getStarAt(x, y) !== -1) return;
+    const size = Math.random() * 2.5 + 1.5;
+    const colors = ['#ffffff','#fffce8','#e8f0ff','#ffd8a8','#c8e8ff'];
+    stars.push({ x, y, r: size, color: colors[Math.floor(Math.random()*colors.length)] });
+    updateStarCount();
+    spawnParticle(x, y);
+  } else {
+    const idx = getStarAt(x, y);
+    if (idx === -1) { connectStart = null; return; }
+    if (connectStart === null) {
+      connectStart = idx;
+    } else {
+      if (connectStart !== idx) {
+        // Check duplicate
+        const exists = lines.some(l =>
+          (l[0] === connectStart && l[1] === idx) ||
+          (l[0] === idx && l[1] === connectStart)
+        );
+        if (!exists) lines.push([connectStart, idx]);
+      }
+      connectStart = null;
+    }
+  }
+});
+
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const idx = getStarAt(e.clientX, e.clientY);
+  if (idx !== -1) {
+    lines = lines.filter(l => l[0] !== idx && l[1] !== idx);
+    lines = lines.map(l => [
+      l[0] > idx ? l[0] - 1 : l[0],
+      l[1] > idx ? l[1] - 1 : l[1]
+    ]);
+    stars.splice(idx, 1);
+    if (connectStart === idx) connectStart = null;
+    updateStarCount();
+  }
+});
+
+// Particles
+let particles = [];
+function spawnParticle(x, y) {
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 1.5 + 0.5;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      r: Math.random() * 1.5 + 0.5
+    });
+  }
+}
+
+// Particle overlay (separate loop)
+setInterval(() => {
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200,220,255,${p.life * 0.8})`;
+    ctx.fill();
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 0.06;
+  });
+}, 16);
+
+function toggleMode() {
+  mode = mode === 'draw' ? 'connect' : 'draw';
+  connectStart = null;
+  document.getElementById('modeLabel').textContent = mode === 'draw' ? 'Draw' : 'Connect';
+  document.getElementById('modeDisplay').textContent = mode === 'draw' ? 'DRAW STARS' : 'CONNECT STARS';
+}
+
+function undoLast() {
+  if (mode === 'draw' && stars.length > 0) {
+    const idx = stars.length - 1;
+    lines = lines.filter(l => l[0] !== idx && l[1] !== idx);
+    stars.pop();
+    updateStarCount();
+  } else if (mode === 'connect' && lines.length > 0) {
+    lines.pop();
+  }
+}
+
+function clearCanvas() {
+  if (stars.length === 0) return;
+  if (confirm('Clear all stars and lines?')) {
+    stars = []; lines = []; connectStart = null;
+    updateStarCount();
+  }
+}
+
+function updateStarCount() {
+  document.getElementById('starCount').textContent = `${stars.length} star${stars.length !== 1 ? 's' : ''}`;
+}
+
+function openSaveModal() {
+  if (stars.length < 2) { alert('Place at least 2 stars first!'); return; }
+  document.getElementById('modalOverlay').style.display = 'flex';
+  document.getElementById('constName').value = '';
+  setTimeout(() => document.getElementById('constName').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+document.getElementById('constName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveConstellation();
+  if (e.key === 'Escape') closeModal();
+});
+
+function saveConstellation() {
+  const name = document.getElementById('constName').value.trim();
+  if (!name) { alert('Please enter a name!'); return; }
+  const entry = {
+    id: Date.now(),
+    name,
+    stars: JSON.parse(JSON.stringify(stars)),
+    lines: JSON.parse(JSON.stringify(lines)),
+    date: new Date().toLocaleDateString()
+  };
+  saved.unshift(entry);
+  localStorage.setItem('constellations', JSON.stringify(saved));
+  closeModal();
+  renderSavedList();
+  // Flash confirmation
+  const btn = document.querySelector('.btn');
+  const orig = btn.textContent;
+}
+
+function togglePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('savedPanel').classList.toggle('open', panelOpen);
+  renderSavedList();
+}
+
+function renderSavedList() {
+  const list = document.getElementById('savedList');
+  if (saved.length === 0) {
+    list.innerHTML = '<div class="empty-msg">No constellations saved yet</div>';
+    return;
+  }
+  list.innerHTML = saved.map((c, i) => `
+    <div class="saved-item" onclick="loadConstellation(${i})">
+      <span class="del" onclick="event.stopPropagation();deleteSaved(${i})">×</span>
+      <div class="name">${c.name}</div>
+      <div class="meta">${c.stars.length} stars · ${c.date}</div>
+    </div>
+  `).join('');
+}
+
+function loadConstellation(i) {
+  if (!confirm(`Load "${saved[i].name}"? Current work will be cleared.`)) return;
+  stars = JSON.parse(JSON.stringify(saved[i].stars));
+  lines = JSON.parse(JSON.stringify(saved[i].lines));
+  connectStart = null;
+  updateStarCount();
+}
+
+function deleteSaved(i) {
+  if (!confirm(`Delete "${saved[i].name}"?`)) return;
+  saved.splice(i, 1);
+  localStorage.setItem('constellations', JSON.stringify(saved));
+  renderSavedList();
+}
+
+window.addEventListener('resize', resize);
+resize();
+render();
+renderSavedList();
+</script>
+</body>
+</html>
